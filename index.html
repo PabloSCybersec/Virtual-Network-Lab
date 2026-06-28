@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Network Lab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f5f5f2;
+      --surface:   #ffffff;
+      --surface2:  #f0efeb;
+      --border:    rgba(0,0,0,.1);
+      --border-s:  rgba(0,0,0,.18);
+      --text:      #3d3d3a;
+      --muted:     #888780;
+      --accent:    #185fa5;
+      --accent-bg: #e6f1fb;
+      --pro:       #7c3aed;
+      --pro-bg:    #f3e8ff;
+      --warn:      #ba7517;
+      --warn-bg:   #faeeda;
+      --ok:        #3b6d11;
+      --ok-bg:     #eaf3de;
+      --danger:    #a32d2d;
+      --danger-bg: #fcebeb;
+      --radius:    8px;
+      --mono:      'Courier New', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #1a1a18;
+        --surface:   #242422;
+        --surface2:  #2c2c2a;
+        --border:    rgba(255,255,255,.08);
+        --border-s:  rgba(255,255,255,.16);
+        --text:      #c2c0b6;
+        --muted:     #6b6a65;
+        --accent:    #60a5fa;
+        --accent-bg: #1a2e50;
+        --pro:       #a78bfa;
+        --pro-bg:    #2a1840;
+        --warn:      #fbbf24;
+        --warn-bg:   #3a2800;
+        --ok:        #86efac;
+        --ok-bg:     #0f2410;
+        --danger:    #f87171;
+        --danger-bg: #2d0f0f;
+      }
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo {
+      width: 32px; height: 32px;
+      background: var(--accent-bg);
+      border: 0.5px solid var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    header h1 { font-size: 15px; font-weight: 500; }
+    header p  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+    .status-bar {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .stat-pill b { color: var(--text); }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Canvas */
+    .canvas-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 540px;
+      cursor: crosshair;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      bottom: 10px; left: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Side panel */
+    .panel { display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .card h3 {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+    .tab {
+      flex: 1;
+      background: transparent;
+      border: 0.5px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 4px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: inherit;
+      transition: all .15s;
+    }
+    .tab.active {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border-s);
+    }
+
+    /* Info rows */
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 0.5px solid var(--border);
+      font-size: 13px;
+      gap: 8px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .lbl { color: var(--muted); flex-shrink: 0; }
+    .info-row .val { font-family: var(--mono); font-size: 12px; font-weight: 500; text-align: right; }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge.router { background: var(--accent-bg); color: var(--accent); }
+    .badge.switch { background: var(--warn-bg);   color: var(--warn); }
+    .badge.server { background: var(--pro-bg);    color: var(--pro); }
+    .badge.host   { background: var(--ok-bg);     color: var(--ok); }
+    .badge.online { background: var(--ok-bg);     color: var(--ok); }
+    .badge.fw     { background: var(--danger-bg); color: var(--danger); }
+
+    /* Subnet calc */
+    .calc-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: var(--mono);
+      color: var(--text);
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .calc-input:focus { border-color: var(--accent); }
+
+    .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .calc-box {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .calc-box.full { grid-column: 1 / -1; }
+    .calc-box .cl { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .calc-box .cv { font-size: 12px; font-family: var(--mono); font-weight: 500; }
+
+    /* Ping */
+    .ping-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .ping-row span { font-size: 12px; color: var(--muted); width: 22px; }
+    .ping-row select {
+      flex: 1;
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 7px;
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    /* Log */
+    .log {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-family: var(--mono);
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+    .log .ok   { color: var(--ok); }
+    .log .err  { color: var(--danger); }
+    .log .info { color: var(--accent); }
+    .log .ts   { color: var(--muted); opacity: .7; }
+
+    /* Buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 0.5px solid var(--border-s);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+      font-family: inherit;
+      transition: background .15s;
+      text-align: left;
+    }
+    .btn:hover { background: var(--surface2); }
+    .btn.primary {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .btn.primary:hover { opacity: .85; }
+
+    .empty-sel {
+      text-align: center;
+      padding: 20px 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 0.5px solid var(--border);
+      margin-top: 8px;
+    }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🌐</div>
+    <div>
+      <h1>Virtual Network Lab</h1>
+      <p>Practica subnetting, routing y topologías de red</p>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="stat-pill">Dispositivos: <b id="stat-devices">9</b></div>
+    <div class="stat-pill">Subnets: <b>3</b></div>
+    <div class="stat-pill">Links: <b id="stat-links">8</b></div>
+  </div>
+</header>
+
+<main>
+  <!-- Canvas -->
+  <div class="canvas-card">
+    <canvas id="net"></canvas>
+    <div class="canvas-hint">Click en cualquier dispositivo para inspeccionar · Tab = cambiar vista</div>
+  </div>
+
+  <!-- Panel -->
+  <div class="panel">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('device')">Dispositivo</button>
+        <button class="tab" onclick="switchTab('subnet')">Subnet</button>
+        <button class="tab" onclick="switchTab('ping')">Ping</button>
+      </div>
+
+      <!-- Tab: Device -->
+      <div id="tab-device">
+        <div id="device-info" class="empty-sel">← Haz click en un dispositivo</div>
+      </div>
+
+      <!-- Tab: Subnet calc -->
+      <div id="tab-subnet" style="display:none">
+        <input class="calc-input" id="cidr-in" type="text" value="192.168.1.0/24" oninput="calcSubnet()" placeholder="ej. 10.0.0.0/8">
+        <div class="calc-grid">
+          <div class="calc-box"><div class="cl">Network address</div><div class="cv" id="cr-net">—</div></div>
+          <div class="calc-box"><div class="cl">Subnet mask</div><div class="cv" id="cr-mask">—</div></div>
+          <div class="calc-box"><div class="cl">Broadcast</div><div class="cv" id="cr-bc">—</div></div>
+          <div class="calc-box"><div class="cl">Hosts disponibles</div><div class="cv" id="cr-hosts">—</div></div>
+          <div class="calc-box full"><div class="cl">Rango usable</div><div class="cv" id="cr-range">—</div></div>
+          <div class="calc-box full"><div class="cl">Wildcard mask</div><div class="cv" id="cr-wild">—</div></div>
+        </div>
+      </div>
+
+      <!-- Tab: Ping -->
+      <div id="tab-ping" style="display:none">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Simula ICMP entre dos hosts</div>
+        <div class="ping-row"><span>De</span><select id="ping-src"></select></div>
+        <div class="ping-row"><span>A</span><select id="ping-dst"></select></div>
+        <button class="btn primary" onclick="runPing()" style="margin-bottom:8px">▶ Ejecutar ping</button>
+        <div class="log" id="ping-log">-- selecciona origen y destino --</div>
+      </div>
+    </div>
+
+    <!-- Activity log -->
+    <div class="card">
+      <h3>Actividad de red</h3>
+      <div class="log" id="activity-log">
+        <span class="info">[init]</span> Red virtual iniciada<br>
+        <span class="info">[info]</span> 3 subnets · 9 dispositivos · 8 enlaces
+      </div>
+    </div>
+
+    <!-- Learn buttons -->
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="https://en.wikipedia.org/wiki/Subnetwork" target="_blank" class="btn">📖 ¿Qué es una subnet?</a>
+      <a href="https://en.wikipedia.org/wiki/Routing" target="_blank" class="btn">📖 ¿Cómo funciona el routing?</a>
+      <a href="https://en.wikipedia.org/wiki/MAC_address" target="_blank" class="btn">📖 Direcciones MAC explicadas</a>
+    </div>
+  </div>
+</main>
+
+<footer>Virtual Network Lab · Proyecto de portafolio · <a href="https://github.com/" style="color:var(--accent)">Ver en GitHub</a></footer>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const SUBNETS = [
+  { id:'s1', label:'10.0.1.0/24 — LAN-A', x:50, y:70, w:310, h:230 },
+  { id:'s2', label:'10.0.2.0/24 — LAN-B', x:50, y:330, w:230, h:190 },
+  { id:'s3', label:'10.0.3.0/24 — LAN-C', x:320, y:200, w:270, h:330 },
+];
+
+const SUBNET_COLORS = [
+  { fill:'rgba(24,95,165,.05)',  stroke:'rgba(24,95,165,.3)' },
+  { fill:'rgba(124,58,237,.05)', stroke:'rgba(124,58,237,.3)' },
+  { fill:'rgba(59,109,17,.05)',  stroke:'rgba(59,109,17,.3)' },
+];
+
+const DEVICES = [
+  { id:'r1',  label:'Router',      ip:'10.0.0.1',   mac:'AA:BB:00:00:00:01', type:'router', subnet:'Core (WAN)', x:310, y:45,  ports:4, gateway:'—' },
+  { id:'sw1', label:'Switch-A',    ip:'10.0.1.254',  mac:'AA:BB:01:FF:FF:FE', type:'switch', subnet:'10.0.1.0/24', x:140, y:170, ports:8, gateway:'10.0.0.1' },
+  { id:'sw2', label:'Switch-B',    ip:'10.0.2.254',  mac:'AA:BB:02:FF:FF:FE', type:'switch', subnet:'10.0.2.0/24', x:160, y:430, ports:8, gateway:'10.0.0.1' },
+  { id:'sw3', label:'Switch-C',    ip:'10.0.3.254',  mac:'AA:BB:03:FF:FF:FE', type:'switch', subnet:'10.0.3.0/24', x:450, y:330, ports:8, gateway:'10.0.0.1' },
+  { id:'web', label:'Web Server',  ip:'10.0.1.10',   mac:'AA:BB:01:00:00:0A', type:'server', subnet:'10.0.1.0/24', x:80,  y:265, ports:1, gateway:'10.0.1.254', role:'nginx · :80 :443' },
+  { id:'db',  label:'DB Server',   ip:'10.0.1.20',   mac:'AA:BB:01:00:00:14', type:'server', subnet:'10.0.1.0/24', x:220, y:265, ports:1, gateway:'10.0.1.254', role:'PostgreSQL · :5432' },
+  { id:'h1',  label:'Host-1',      ip:'10.0.2.10',   mac:'AA:BB:02:00:00:0A', type:'host',   subnet:'10.0.2.0/24', x:90,  y:490, ports:1, gateway:'10.0.2.254' },
+  { id:'h2',  label:'Host-2',      ip:'10.0.3.10',   mac:'AA:BB:03:00:00:0A', type:'host',   subnet:'10.0.3.0/24', x:370, y:450, ports:1, gateway:'10.0.3.254' },
+  { id:'h3',  label:'Host-3',      ip:'10.0.3.20',   mac:'AA:BB:03:00:00:14', type:'host',   subnet:'10.0.3.0/24', x:510, y:450, ports:1, gateway:'10.0.3.254' },
+];
+
+const LINKS = [
+  { a:'r1', b:'sw1' },{ a:'r1', b:'sw2' },{ a:'r1', b:'sw3' },
+  { a:'sw1', b:'web' },{ a:'sw1', b:'db' },
+  { a:'sw2', b:'h1' },
+  { a:'sw3', b:'h2' },{ a:'sw3', b:'h3' },
+];
+
+// ─── CANVAS SETUP ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('net');
+const ctx    = canvas.getContext('2d');
+const DPR    = devicePixelRatio || 1;
+const dark   = matchMedia('(prefers-color-scheme:dark)').matches;
+
+function resizeCanvas() {
+  canvas.width  = canvas.offsetWidth  * DPR;
+  canvas.height = canvas.offsetHeight * DPR;
+  ctx.scale(DPR, DPR);
+  draw();
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+
+const C = {
+  text:      dark ? '#c2c0b6' : '#3d3d3a',
+  muted:     dark ? '#6b6a65' : '#888780',
+  link:      dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.12)',
+  linkOn:    dark ? 'rgba(96,165,250,.7)'   : 'rgba(24,95,165,.55)',
+  router:    dark ? '#60a5fa' : '#185fa5',
+  routerFg:  dark ? '#1a2e50' : '#e6f1fb',
+  sw:        dark ? '#fbbf24' : '#ba7517',
+  swFg:      dark ? '#3a2800' : '#faeeda',
+  server:    dark ? '#a78bfa' : '#7c3aed',
+  serverFg:  dark ? '#2a1840' : '#f3e8ff',
+  host:      dark ? '#86efac' : '#3b6d11',
+  hostFg:    dark ? '#0f2410' : '#eaf3de',
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function getDevice(id) { return DEVICES.find(d => d.id === id); }
+function devR(d) {
+  return d.type === 'router' ? 24 : d.type === 'switch' ? 20 : d.type === 'server' ? 18 : 15;
+}
+function devColors(d) {
+  if (d.type === 'router') return { stroke: C.router, fill: C.routerFg };
+  if (d.type === 'switch') return { stroke: C.sw,     fill: C.swFg     };
+  if (d.type === 'server') return { stroke: C.server, fill: C.serverFg };
+  return { stroke: C.host, fill: C.hostFg };
+}
+
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
+let selected   = null;
+let animPacket = null;
+let animT      = 0;
+let activeLinks = new Set();
+
+function drawSubnet(s, i) {
+  const col = SUBNET_COLORS[i] || SUBNET_COLORS[0];
+  ctx.save();
+  ctx.fillStyle   = col.fill;
+  ctx.strokeStyle = col.stroke;
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.roundRect(s.x, s.y, s.w, s.h, 10);
+  ctx.fill(); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '500 11px monospace';
+  ctx.fillStyle = col.stroke;
+  ctx.fillText(s.label, s.x + 10, s.y + 17);
+  ctx.restore();
+}
+
+function drawLink(l) {
+  const a = getDevice(l.a), b = getDevice(l.b);
+  if (!a || !b) return;
+  const key = [l.a, l.b].sort().join('_');
+  ctx.save();
+  ctx.strokeStyle = activeLinks.has(key) ? C.linkOn : C.link;
+  ctx.lineWidth   = activeLinks.has(key) ? 2 : 1;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDevice(d) {
+  const r   = devR(d);
+  const col = devColors(d);
+  const sel = selected && selected.id === d.id;
+
+  ctx.save();
+  if (sel) { ctx.shadowColor = col.stroke; ctx.shadowBlur = 10; }
+
+  ctx.beginPath();
+  if (d.type === 'router') {
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 3 * i - Math.PI / 6;
+      i === 0 ? ctx.moveTo(d.x + r * Math.cos(a), d.y + r * Math.sin(a))
+              : ctx.lineTo(d.x + r * Math.cos(a), d.y + r * Math.sin(a));
+    }
+    ctx.closePath();
+  } else if (d.type === 'switch') {
+    ctx.roundRect(d.x - r, d.y - r * 0.55, r * 2, r * 1.1, 5);
+  } else {
+    ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+  }
+
+  ctx.fillStyle   = col.fill;
+  ctx.strokeStyle = sel ? col.stroke : col.stroke;
+  ctx.lineWidth   = sel ? 2.5 : 1;
+  ctx.fill(); ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font         = '500 10px system-ui,sans-serif';
+  ctx.fillStyle    = col.stroke;
+  ctx.fillText(d.label, d.x, d.y);
+
+  ctx.font      = '10px monospace';
+  ctx.fillStyle = C.muted;
+  const yOff = d.type === 'switch' ? r * 1.1 + 10 : r + 13;
+  ctx.fillText(d.ip, d.x, d.y + yOff);
+  ctx.restore();
+}
+
+function drawPacketAnim() {
+  if (!animPacket) return;
+  const { path } = animPacket;
+  const total = path.length - 1;
+  const seg   = Math.min(Math.floor(animT * total), total - 1);
+  const frac  = animT * total - seg;
+  const a = getDevice(path[seg]), b = getDevice(path[seg + 1]);
+  if (!a || !b) return;
+  const px = a.x + (b.x - a.x) * frac;
+  const py = a.y + (b.y - a.y) * frac;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(px, py, 6, 0, Math.PI * 2);
+  ctx.fillStyle   = C.router;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth   = 1.5;
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W(), H());
+  SUBNETS.forEach((s, i) => drawSubnet(s, i));
+  LINKS.forEach(drawLink);
+  DEVICES.forEach(drawDevice);
+  drawPacketAnim();
+}
+
+// Animation loop
+(function loop() {
+  if (animPacket) {
+    animT += 0.013;
+    if (animT >= 1) {
+      animPacket = null; animT = 0; activeLinks.clear();
+      appendActivity('<span class="ok">[ok]</span> Paquete entregado correctamente');
+    }
+  }
+  draw();
+  requestAnimationFrame(loop);
+})();
+
+// ─── INTERACTIONS ─────────────────────────────────────────────────────────────
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  let hit = null;
+  DEVICES.forEach(d => {
+    const r  = devR(d) + 8;
+    const dx = mx - d.x, dy = my - d.y;
+    if (Math.sqrt(dx * dx + dy * dy) < r) hit = d;
+  });
+  selected = hit;
+  showDevice(hit);
+  draw();
+});
+
+function showDevice(d) {
+  const el = document.getElementById('device-info');
+  if (!d) { el.innerHTML = '<div class="empty-sel">← Haz click en un dispositivo</div>'; return; }
+  const labels = { router:'Router', switch:'Switch', server:'Server', host:'Host' };
+  el.innerHTML = `
+    <div class="info-row"><span class="lbl">Nombre</span><span class="val">${d.label} <span class="badge ${d.type}">${labels[d.type]}</span></span></div>
+    <div class="info-row"><span class="lbl">Dirección IP</span><span class="val">${d.ip}</span></div>
+    <div class="info-row"><span class="lbl">Subnet</span><span class="val">${d.subnet}</span></div>
+    <div class="info-row"><span class="lbl">MAC address</span><span class="val">${d.mac}</span></div>
+    <div class="info-row"><span class="lbl">Default gateway</span><span class="val">${d.gateway}</span></div>
+    <div class="info-row"><span class="lbl">Puertos</span><span class="val">${d.ports}</span></div>
+    ${d.role ? `<div class="info-row"><span class="lbl">Servicio</span><span class="val">${d.role}</span></div>` : ''}
+    <div class="info-row"><span class="lbl">Estado</span><span class="val"><span class="badge online">● Online</span></span></div>
+  `;
+  appendActivity(`<span class="info">[sel]</span> Inspeccionando ${d.label} · ${d.ip}`);
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  ['device','subnet','ping'].forEach((name, i) => {
+    document.getElementById('tab-' + name).style.display = name === t ? '' : 'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active', name === t);
+  });
+  if (t === 'subnet') calcSubnet();
+  if (t === 'ping')   populatePing();
+}
+
+// ─── SUBNET CALC ──────────────────────────────────────────────────────────────
+function ipToInt(ip) { return ip.split('.').reduce((a, b) => a * 256 + parseInt(b), 0); }
+function intToIp(n)  { return [24,16,8,0].map(s => (n >>> s) & 255).join('.'); }
+
+function calcSubnet() {
+  const val = document.getElementById('cidr-in').value.trim();
+  const m   = val.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/);
+  const ids = ['cr-net','cr-mask','cr-bc','cr-hosts','cr-range','cr-wild'];
+  if (!m) { ids.forEach(id => document.getElementById(id).textContent = '—'); return; }
+  const ip   = ipToInt(m[1]);
+  const plen = parseInt(m[2]);
+  if (plen < 0 || plen > 32) return;
+  const mask  = plen === 0 ? 0 : ((0xffffffff << (32 - plen)) >>> 0);
+  const net   = ip & mask;
+  const bc    = net | (~mask >>> 0);
+  const hosts = Math.max(0, Math.pow(2, 32 - plen) - 2);
+  document.getElementById('cr-net').textContent   = intToIp(net);
+  document.getElementById('cr-mask').textContent  = intToIp(mask);
+  document.getElementById('cr-bc').textContent    = intToIp(bc);
+  document.getElementById('cr-hosts').textContent = hosts.toLocaleString();
+  document.getElementById('cr-range').textContent = hosts > 0 ? `${intToIp(net+1)} – ${intToIp(bc-1)}` : 'N/A';
+  document.getElementById('cr-wild').textContent  = intToIp(~mask >>> 0);
+}
+calcSubnet();
+
+// ─── PING SIMULATION ─────────────────────────────────────────────────────────
+function populatePing() {
+  ['ping-src','ping-dst'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = DEVICES.map(d =>
+      `<option value="${d.id}">${d.ip}  (${d.label})</option>`
+    ).join('');
+  });
+  document.getElementById('ping-dst').value = 'web';
+}
+populatePing();
+
+function findPath(srcId, dstId) {
+  const adj = {};
+  DEVICES.forEach(d => adj[d.id] = []);
+  LINKS.forEach(l => { adj[l.a].push(l.b); adj[l.b].push(l.a); });
+  const visited = { [srcId]: true }, queue = [srcId], prev = {};
+  while (queue.length) {
+    const cur = queue.shift();
+    if (cur === dstId) {
+      const path = []; let c = dstId;
+      while (c) { path.unshift(c); c = prev[c]; }
+      return path;
+    }
+    (adj[cur] || []).forEach(n => { if (!visited[n]) { visited[n] = true; prev[n] = cur; queue.push(n); } });
+  }
+  return null;
+}
+
+function runPing() {
+  const srcId = document.getElementById('ping-src').value;
+  const dstId = document.getElementById('ping-dst').value;
+  const plog  = document.getElementById('ping-log');
+  if (srcId === dstId) { plog.innerHTML = '<span class="err">Error: mismo host</span>'; return; }
+  const path = findPath(srcId, dstId);
+  const src  = getDevice(srcId), dst = getDevice(dstId);
+  if (!path) { plog.innerHTML = '<span class="err">Destination unreachable</span>'; return; }
+  const hops    = path.length - 1;
+  const latency = () => (Math.random() * 3 + 0.4).toFixed(2);
+  let log = `<span class="info">PING ${dst.ip} (${dst.label})</span>\n`;
+  for (let i = 1; i <= 4; i++)
+    log += `64 bytes from ${dst.ip}: icmp_seq=${i} ttl=${64 - hops} time=${latency()} ms\n`;
+  log += `<span class="ok">4 enviados, 4 recibidos, 0% pérdida</span>`;
+  plog.innerHTML = log;
+  // Animate
+  animPacket = { path }; animT = 0; activeLinks.clear();
+  for (let i = 0; i < path.length - 1; i++) {
+    activeLinks.add([path[i], path[i+1]].sort().join('_'));
+  }
+  appendActivity(`<span class="info">[ping]</span> ${src.ip} → ${dst.ip} · ${hops} hop${hops > 1 ? 's' : ''}`);
+}
+
+// ─── ACTIVITY LOG ────────────────────────────────────────────────────────────
+function appendActivity(msg) {
+  const log = document.getElementById('activity-log');
+  const now = new Date();
+  const ts  = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2,'0')).join(':');
+  log.innerHTML += `\n<span class="ts">[${ts}]</span> ${msg.replace(/^\s*<span[^>]+>\[[^\]]+\]<\/span>\s*/,'')}`;
+  log.scrollTop = log.scrollHeight;
+}
+
+// Keyboard shortcut: Tab key cycles tabs
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const tabs = ['device','subnet','ping'];
+    const active = tabs.findIndex(t => document.getElementById('tab-'+t).style.display !== 'none');
+    switchTab(tabs[(active + 1) % tabs.length]);
+  }
+});
+</script>
+</body>
+</html>
