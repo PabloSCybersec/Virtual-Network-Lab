@@ -396,6 +396,7 @@ const SUBNET_COLORS = [
 ];
 
 const DEVICES = [
+  { id:'fw1', label:'Firewall', ip:'203.0.113.1', mac:'AA:FW:00:00:00:01', type:'fw', subnet:'DMZ / WAN edge', x:310, y:105, ports:3, gateway:'—' },
   { id:'r1',  label:'Router',      ip:'10.0.0.1',   mac:'AA:BB:00:00:00:01', type:'router', subnet:'Core (WAN)', x:310, y:45,  ports:4, gateway:'—' },
   { id:'sw1', label:'Switch-A',    ip:'10.0.1.254',  mac:'AA:BB:01:FF:FF:FE', type:'switch', subnet:'10.0.1.0/24', x:140, y:170, ports:8, gateway:'10.0.0.1' },
   { id:'sw2', label:'Switch-B',    ip:'10.0.2.254',  mac:'AA:BB:02:FF:FF:FE', type:'switch', subnet:'10.0.2.0/24', x:160, y:430, ports:8, gateway:'10.0.0.1' },
@@ -408,7 +409,7 @@ const DEVICES = [
 ];
 
 const LINKS = [
-  { a:'r1', b:'sw1' },{ a:'r1', b:'sw2' },{ a:'r1', b:'sw3' },
+  { a:'fw1', b:'r1' },{ a:'r1', b:'sw1' },{ a:'r1', b:'sw2' },{ a:'r1', b:'sw3' },
   { a:'sw1', b:'web' },{ a:'sw1', b:'db' },
   { a:'sw2', b:'h1' },
   { a:'sw3', b:'h2' },{ a:'sw3', b:'h3' },
@@ -418,19 +419,13 @@ const LINKS = [
 const canvas = document.getElementById('net');
 const ctx    = canvas.getContext('2d');
 const DPR    = devicePixelRatio || 1;
-const dark   = matchMedia('(prefers-color-scheme:dark)').matches;
-
-function resizeCanvas() {
-  canvas.width  = canvas.offsetWidth  * DPR;
-  canvas.height = canvas.offsetHeight * DPR;
-  ctx.scale(DPR, DPR);
-  draw();
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
 const W = () => canvas.offsetWidth;
 const H = () => canvas.offsetHeight;
+let selected   = null;
+let animPacket = null;
+let animT      = 0;
+let activeLinks = new Set();
+const dark   = matchMedia('(prefers-color-scheme:dark)').matches;
 
 const C = {
   text:      dark ? '#c2c0b6' : '#3d3d3a',
@@ -447,6 +442,21 @@ const C = {
   hostFg:    dark ? '#0f2410' : '#eaf3de',
 };
 
+
+
+
+
+function resizeCanvas() {
+  canvas.width  = canvas.offsetWidth  * DPR;
+  canvas.height = canvas.offsetHeight * DPR;
+  ctx.scale(DPR, DPR);
+  draw();
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getDevice(id) { return DEVICES.find(d => d.id === id); }
 function devR(d) {
@@ -460,10 +470,6 @@ function devColors(d) {
 }
 
 // ─── DRAW ─────────────────────────────────────────────────────────────────────
-let selected   = null;
-let animPacket = null;
-let animT      = 0;
-let activeLinks = new Set();
 
 function drawSubnet(s, i) {
   const col = SUBNET_COLORS[i] || SUBNET_COLORS[0];
