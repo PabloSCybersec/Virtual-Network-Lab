@@ -307,11 +307,11 @@
     <div class="logo">🌐</div>
     <div>
       <h1>Virtual Network Lab</h1>
-      <p>Practica subnetting, routing y topologías de red</p>
+      <p>Practice Subnetting, routing, firewall and network topologies</p>
     </div>
   </div>
   <div class="status-bar">
-    <div class="stat-pill">Dispositivos: <b id="stat-devices">9</b></div>
+    <div class="stat-pill">Devices: <b id="stat-devices">9</b></div>
     <div class="stat-pill">Subnets: <b>3</b></div>
     <div class="stat-pill">Links: <b id="stat-links">8</b></div>
   </div>
@@ -321,21 +321,21 @@
   <!-- Canvas -->
   <div class="canvas-card">
     <canvas id="net"></canvas>
-    <div class="canvas-hint">Click en cualquier dispositivo para inspeccionar · Tab = cambiar vista</div>
+    <div class="canvas-hint">Click on any device to inspect · Tab = cambiar vista</div>
   </div>
 
   <!-- Panel -->
   <div class="panel">
     <div class="card">
       <div class="tabs">
-        <button class="tab active" onclick="switchTab('device')">Dispositivo</button>
+        <button class="tab active" onclick="switchTab('device')">Device</button>
         <button class="tab" onclick="switchTab('subnet')">Subnet</button>
         <button class="tab" onclick="switchTab('ping')">Ping</button>
       </div>
 
       <!-- Tab: Device -->
       <div id="tab-device">
-        <div id="device-info" class="empty-sel">← Haz click en un dispositivo</div>
+        <div id="device-info" class="empty-sel">← Click on any device to inspect</div>
       </div>
 
       <!-- Tab: Subnet calc -->
@@ -353,33 +353,33 @@
 
       <!-- Tab: Ping -->
       <div id="tab-ping" style="display:none">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Simula ICMP entre dos hosts</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Simulate ICMP between two hosts</div>
         <div class="ping-row"><span>De</span><select id="ping-src"></select></div>
         <div class="ping-row"><span>A</span><select id="ping-dst"></select></div>
-        <button class="btn primary" onclick="runPing()" style="margin-bottom:8px">▶ Ejecutar ping</button>
-        <div class="log" id="ping-log">-- selecciona origen y destino --</div>
+        <button class="btn primary" onclick="runPing()" style="margin-bottom:8px">▶ Run ping</button>
+        <div class="log" id="ping-log">-- select source and destination --</div>
       </div>
     </div>
 
     <!-- Activity log -->
     <div class="card">
-      <h3>Actividad de red</h3>
+      <h3>Network Activity</h3>
       <div class="log" id="activity-log">
-        <span class="info">[init]</span> Red virtual iniciada<br>
-        <span class="info">[info]</span> 3 subnets · 9 dispositivos · 8 enlaces
+        <span class="info">[init]</span> Virtual network started<br>
+        <span class="info">[info]</span> 3 subnets · 9 devices · 8 links
       </div>
     </div>
 
     <!-- Learn buttons -->
     <div style="display:flex;flex-direction:column;gap:6px">
-      <a href="https://en.wikipedia.org/wiki/Subnetwork" target="_blank" class="btn">📖 ¿Qué es una subnet?</a>
-      <a href="https://en.wikipedia.org/wiki/Routing" target="_blank" class="btn">📖 ¿Cómo funciona el routing?</a>
-      <a href="https://en.wikipedia.org/wiki/MAC_address" target="_blank" class="btn">📖 Direcciones MAC explicadas</a>
+      <a href="https://en.wikipedia.org/wiki/Subnetwork" target="_blank" class="btn">📖 What is a subnet?</a>
+      <a href="https://en.wikipedia.org/wiki/Routing" target="_blank" class="btn">📖 How does routing work?</a>
+      <a href="https://en.wikipedia.org/wiki/MAC_address" target="_blank" class="btn">📖 MAC address explained</a>
     </div>
   </div>
 </main>
 
-<footer>Virtual Network Lab · Proyecto de portafolio · <a href="https://github.com/" style="color:var(--accent)">Ver en GitHub</a></footer>
+<footer>Virtual Network Lab · Portfolio Proyect · <a href="https://github.com/" style="color:var(--accent)">View on GitHub</a></footer>
 
 <script>
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -570,7 +570,7 @@ function draw() {
     animT += 0.013;
     if (animT >= 1) {
       animPacket = null; animT = 0; activeLinks.clear();
-      appendActivity('<span class="ok">[ok]</span> Paquete entregado correctamente');
+      appendActivity('<span class="ok">[ok]</span> Packet delivered successfully');
     }
   }
   draw();
@@ -595,7 +595,7 @@ canvas.addEventListener('click', e => {
 
 function showDevice(d) {
   const el = document.getElementById('device-info');
-  if (!d) { el.innerHTML = '<div class="empty-sel">← Haz click en un dispositivo</div>'; return; }
+  if (!d) { el.innerHTML = '<div class="empty-sel">← Click on any device to inspect</div>'; return; }
   const labels = { router:'Router', switch:'Switch', server:'Server', host:'Host' };
   el.innerHTML = `
     <div class="info-row"><span class="lbl">Nombre</span><span class="val">${d.label} <span class="badge ${d.type}">${labels[d.type]}</span></span></div>
@@ -607,7 +607,7 @@ function showDevice(d) {
     ${d.role ? `<div class="info-row"><span class="lbl">Servicio</span><span class="val">${d.role}</span></div>` : ''}
     <div class="info-row"><span class="lbl">Estado</span><span class="val"><span class="badge online">● Online</span></span></div>
   `;
-  appendActivity(`<span class="info">[sel]</span> Inspeccionando ${d.label} · ${d.ip}`);
+  appendActivity(`<span class="info">[sel]</span> Inspecting ${d.label} · ${d.ip}`);
 }
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
